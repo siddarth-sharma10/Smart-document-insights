@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smart Document Insights — Project Blueprint</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0a0f;
+    --surface: #13131a;
+    --border: #1e1e2e;
+    --accent: #6366f1;
+    --accent2: #22d3ee;
+    --accent3: #f59e0b;
+    --accent4: #10b981;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --glow: rgba(99,102,241,0.15);
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Background grid */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: 
+      linear-gradient(var(--border) 1px, transparent 1px),
+      linear-gradient(90deg, var(--border) 1px, transparent 1px);
+    background-size: 40px 40px;
+    opacity: 0.4;
+    z-index: 0;
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 60px 24px;
+  }
+
+  /* Header */
+  .header {
+    text-align: center;
+    margin-bottom: 80px;
+  }
+
+  .badge {
+    display: inline-block;
+    background: rgba(99,102,241,0.15);
+    border: 1px solid rgba(99,102,241,0.4);
+    color: #818cf8;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    padding: 6px 16px;
+    border-radius: 100px;
+    margin-bottom: 24px;
+    animation: fadeIn 0.6s ease;
+  }
+
+  h1 {
+    font-size: clamp(36px, 6vw, 72px);
+    font-weight: 800;
+    line-height: 1;
+    margin-bottom: 20px;
+    background: linear-gradient(135deg, #fff 0%, #818cf8 50%, #22d3ee 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: slideUp 0.7s ease;
+  }
+
+  .subtitle {
+    color: var(--muted);
+    font-size: 18px;
+    font-weight: 400;
+    animation: slideUp 0.9s ease;
+  }
+
+  /* Stats bar */
+  .stats {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 70px;
+    animation: slideUp 1s ease;
+  }
+
+  .stat-pill {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    padding: 10px 24px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+  }
+
+  .stat-pill .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+  }
+
+  /* Section titles */
+  .section-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 3px;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+
+  .section-title {
+    font-size: 32px;
+    font-weight: 700;
+    margin-bottom: 40px;
+  }
+
+  /* RAG Pipeline */
+  .pipeline {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    margin-bottom: 80px;
+    overflow-x: auto;
+    padding-bottom: 10px;
+  }
+
+  .pipe-step {
+    flex: 1;
+    min-width: 140px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px 16px;
+    text-align: center;
+    position: relative;
+    transition: all 0.3s ease;
+    cursor: default;
+  }
+
+  .pipe-step:hover {
+    border-color: var(--accent);
+    transform: translateY(-4px);
+    box-shadow: 0 20px 40px rgba(99,102,241,0.1);
+  }
+
+  .pipe-step .icon {
+    font-size: 28px;
+    margin-bottom: 10px;
+  }
+
+  .pipe-step .step-name {
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 6px;
+    color: #fff;
+  }
+
+  .pipe-step .step-tool {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--accent2);
+    background: rgba(34,211,238,0.08);
+    border-radius: 6px;
+    padding: 3px 8px;
+    display: inline-block;
+  }
+
+  .pipe-arrow {
+    color: var(--muted);
+    font-size: 20px;
+    padding: 0 8px;
+    flex-shrink: 0;
+  }
+
+  /* Stack grid */
+  .stack-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 80px;
+  }
+
+  .stack-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .stack-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    border-radius: 16px 16px 0 0;
+  }
+
+  .stack-card.indigo::before { background: var(--accent); }
+  .stack-card.cyan::before { background: var(--accent2); }
+  .stack-card.amber::before { background: var(--accent3); }
+  .stack-card.green::before { background: var(--accent4); }
+
+  .stack-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 16px 32px rgba(0,0,0,0.3);
+  }
+
+  .stack-card .tag {
+    font-size: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 1px;
+    font-weight: 600;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+  }
+
+  .stack-card.indigo .tag { color: #818cf8; }
+  .stack-card.cyan .tag { color: var(--accent2); }
+  .stack-card.amber .tag { color: var(--accent3); }
+  .stack-card.green .tag { color: var(--accent4); }
+
+  .stack-card h3 {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+
+  .stack-card p {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+
+  .free-badge {
+    display: inline-block;
+    background: rgba(16,185,129,0.1);
+    border: 1px solid rgba(16,185,129,0.3);
+    color: #10b981;
+    font-size: 9px;
+    font-family: 'JetBrains Mono', monospace;
+    padding: 2px 8px;
+    border-radius: 100px;
+    margin-top: 8px;
+  }
+
+  /* Timeline / phases */
+  .phases {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    margin-bottom: 80px;
+  }
+
+  .phase-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 30px;
+    display: flex;
+    gap: 28px;
+    align-items: flex-start;
+    transition: all 0.3s ease;
+  }
+
+  .phase-card:hover {
+    border-color: rgba(99,102,241,0.3);
+    box-shadow: 0 8px 32px rgba(99,102,241,0.05);
+  }
+
+  .phase-num {
+    flex-shrink: 0;
+    width: 48px; height: 48px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    font-weight: 800;
+  }
+
+  .phase-content h3 {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .phase-days {
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    padding: 2px 10px;
+    color: var(--muted);
+    font-weight: 400;
+  }
+
+  .phase-content p {
+    color: var(--muted);
+    font-size: 14px;
+    line-height: 1.6;
+    margin-bottom: 14px;
+  }
+
+  .tasks {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .task-chip {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    padding: 4px 12px;
+    color: var(--text);
+  }
+
+  /* Code snippet */
+  .code-block {
+    background: #0d0d14;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+    margin-bottom: 80px;
+    overflow-x: auto;
+  }
+
+  .code-block pre {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    line-height: 1.7;
+    color: #a5b4fc;
+  }
+
+  .code-comment { color: #374151; }
+  .code-kw { color: #f472b6; }
+  .code-str { color: #86efac; }
+  .code-fn { color: #60a5fa; }
+  .code-var { color: #fde68a; }
+
+  /* Difficulty/ratings */
+  .ratings {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 16px;
+    margin-bottom: 80px;
+  }
+
+  .rating-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+  }
+
+  .rating-card h4 {
+    font-size: 14px;
+    color: var(--muted);
+    margin-bottom: 12px;
+    font-weight: 600;
+  }
+
+  .rating-val {
+    font-size: 36px;
+    font-weight: 800;
+    margin-bottom: 10px;
+    line-height: 1;
+  }
+
+  .rating-bar {
+    height: 4px;
+    background: var(--border);
+    border-radius: 100px;
+    overflow: hidden;
+  }
+
+  .rating-fill {
+    height: 100%;
+    border-radius: 100px;
+    transition: width 1.5s ease;
+  }
+
+  .rating-desc {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 8px;
+  }
+
+  /* Footer */
+  .footer {
+    text-align: center;
+    padding-top: 40px;
+    border-top: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 13px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* Animations */
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* Responsive */
+  @media (max-width: 600px) {
+    .pipeline { flex-wrap: wrap; }
+    .pipe-arrow { display: none; }
+    .phase-card { flex-direction: column; gap: 16px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="badge">// PROJECT BLUEPRINT</div>
+    <h1>Smart Document<br>Insights</h1>
+    <p class="subtitle">RAG-powered AI for legal contracts, research papers & financial reports</p>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats">
+    <div class="stat-pill"><span class="dot" style="background:#10b981"></span> 100% Free Stack</div>
+    <div class="stat-pill"><span class="dot" style="background:#6366f1"></span> 1–2 Week Build</div>
+    <div class="stat-pill"><span class="dot" style="background:#f59e0b"></span> Difficulty: 6/10</div>
+    <div class="stat-pill"><span class="dot" style="background:#22d3ee"></span> Portfolio Value: 9/10</div>
+  </div>
+
+  <!-- RAG Pipeline -->
+  <div class="section-label">// HOW IT WORKS</div>
+  <div class="section-title">The RAG Pipeline</div>
+
+  <div class="pipeline">
+    <div class="pipe-step">
+      <div class="icon">📄</div>
+      <div class="step-name">Upload PDF</div>
+      <div class="step-tool">PyMuPDF</div>
+    </div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-step">
+      <div class="icon">✂️</div>
+      <div class="step-name">Chunk Text</div>
+      <div class="step-tool">LangChain</div>
+    </div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-step">
+      <div class="icon">🔢</div>
+      <div class="step-name">Embed</div>
+      <div class="step-tool">HuggingFace</div>
+    </div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-step">
+      <div class="icon">🗄️</div>
+      <div class="step-name">Store</div>
+      <div class="step-tool">ChromaDB</div>
+    </div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-step">
+      <div class="icon">🔍</div>
+      <div class="step-name">Retrieve</div>
+      <div class="step-tool">Vector Search</div>
+    </div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-step">
+      <div class="icon">🤖</div>
+      <div class="step-name">Generate</div>
+      <div class="step-tool">GPT-3.5-turbo</div>
+    </div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-step">
+      <div class="icon">💬</div>
+      <div class="step-name">Answer</div>
+      <div class="step-tool">+ Citations</div>
+    </div>
+  </div>
+
+  <!-- Tech Stack -->
+  <div class="section-label">// FREE TECH STACK</div>
+  <div class="section-title">Tools You'll Use</div>
+
+  <div class="stack-grid">
+    <div class="stack-card indigo">
+      <div class="tag">Embeddings</div>
+      <h3>all-MiniLM-L6-v2</h3>
+      <p>HuggingFace model. Runs locally on your machine. Converts text chunks into 384-dim vectors.</p>
+      <span class="free-badge">✓ COMPLETELY FREE</span>
+    </div>
+    <div class="stack-card cyan">
+      <div class="tag">Vector DB</div>
+      <h3>ChromaDB</h3>
+      <p>Open-source, local vector database. Stores embeddings and lets you do semantic similarity search.</p>
+      <span class="free-badge">✓ COMPLETELY FREE</span>
+    </div>
+    <div class="stack-card amber">
+      <div class="tag">LLM</div>
+      <h3>GPT-3.5-turbo</h3>
+      <p>Your OpenAI API. Used only for the final answer generation, not embeddings. Very low cost per query.</p>
+      <span class="free-badge">✓ ~$0.001 per Q</span>
+    </div>
+    <div class="stack-card green">
+      <div class="tag">Backend</div>
+      <h3>FastAPI</h3>
+      <p>Python async API framework. Handles file uploads, ingestion pipeline, and query endpoints.</p>
+      <span class="free-badge">✓ COMPLETELY FREE</span>
+    </div>
+    <div class="stack-card indigo">
+      <div class="tag">PDF Parser</div>
+      <h3>PyMuPDF</h3>
+      <p>Fast PDF text extraction. Also handles research papers with complex layouts and tables.</p>
+      <span class="free-badge">✓ COMPLETELY FREE</span>
+    </div>
+    <div class="stack-card cyan">
+      <div class="tag">Orchestration</div>
+      <h3>LangChain</h3>
+      <p>Handles chunking, retrieval, and prompt building. Saves you 80% of the boilerplate code.</p>
+      <span class="free-badge">✓ COMPLETELY FREE</span>
+    </div>
+    <div class="stack-card amber">
+      <div class="tag">Frontend</div>
+      <h3>React / HTML</h3>
+      <p>Upload UI + chat interface + source citation highlighting. Deploy free on Vercel or Netlify.</p>
+      <span class="free-badge">✓ COMPLETELY FREE</span>
+    </div>
+    <div class="stack-card green">
+      <div class="tag">Hosting</div>
+      <h3>Railway.app</h3>
+      <p>Free tier backend hosting. Or just run locally — perfect for your portfolio demo.</p>
+      <span class="free-badge">✓ FREE TIER</span>
+    </div>
+  </div>
+
+  <!-- Build Phases -->
+  <div class="section-label">// STEP BY STEP</div>
+  <div class="section-title">Build Phases</div>
+
+  <div class="phases">
+
+    <div class="phase-card">
+      <div class="phase-num" style="background:rgba(99,102,241,0.15);color:#818cf8;">1</div>
+      <div class="phase-content">
+        <h3>Project Setup <span class="phase-days">Day 1</span></h3>
+        <p>Set up your Python environment, install all dependencies, and configure your OpenAI API key in a .env file. Create the folder structure.</p>
+        <div class="tasks">
+          <span class="task-chip">pip install langchain chromadb</span>
+          <span class="task-chip">pip install fastapi uvicorn</span>
+          <span class="task-chip">pip install pymupdf openai</span>
+          <span class="task-chip">pip install sentence-transformers</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="phase-card">
+      <div class="phase-num" style="background:rgba(34,211,238,0.15);color:#22d3ee;">2</div>
+      <div class="phase-content">
+        <h3>Ingestion Pipeline <span class="phase-days">Day 2–3</span></h3>
+        <p>Build the core pipeline: extract text from PDFs → split into 500-token chunks with 50-token overlap → embed each chunk with HuggingFace → store in ChromaDB with metadata (page number, document name, section).</p>
+        <div class="tasks">
+          <span class="task-chip">PDF text extraction</span>
+          <span class="task-chip">Recursive text splitter</span>
+          <span class="task-chip">Local embeddings</span>
+          <span class="task-chip">ChromaDB storage</span>
+          <span class="task-chip">Metadata tagging</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="phase-card">
+      <div class="phase-num" style="background:rgba(245,158,11,0.15);color:#f59e0b;">3</div>
+      <div class="phase-content">
+        <h3>RAG Query Pipeline <span class="phase-days">Day 3–4</span></h3>
+        <p>When user asks a question: embed the question → search ChromaDB for top 5 most similar chunks → inject those chunks into a prompt → send to GPT-3.5-turbo → return answer with page citations.</p>
+        <div class="tasks">
+          <span class="task-chip">Semantic search</span>
+          <span class="task-chip">Prompt engineering</span>
+          <span class="task-chip">GPT-3.5 call</span>
+          <span class="task-chip">Source attribution</span>
+          <span class="task-chip">Context window mgmt</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="phase-card">
+      <div class="phase-num" style="background:rgba(16,185,129,0.15);color:#10b981;">4</div>
+      <div class="phase-content">
+        <h3>FastAPI Backend <span class="phase-days">Day 4–5</span></h3>
+        <p>Wrap your pipeline in a REST API. Three main endpoints: upload a document, ask a question, list uploaded documents. Add CORS for your frontend.</p>
+        <div class="tasks">
+          <span class="task-chip">POST /upload</span>
+          <span class="task-chip">POST /ask</span>
+          <span class="task-chip">GET /documents</span>
+          <span class="task-chip">DELETE /document/:id</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="phase-card">
+      <div class="phase-num" style="background:rgba(99,102,241,0.15);color:#818cf8;">5</div>
+      <div class="phase-content">
+        <h3>Frontend UI <span class="phase-days">Day 5–7</span></h3>
+        <p>Build a clean chat interface. Left panel: drag-and-drop PDF upload + document list. Right panel: chat window with answers + highlighted source citations. Deploy to Vercel for free.</p>
+        <div class="tasks">
+          <span class="task-chip">File upload drag & drop</span>
+          <span class="task-chip">Chat UI</span>
+          <span class="task-chip">Source card display</span>
+          <span class="task-chip">Loading states</span>
+          <span class="task-chip">Deploy to Vercel</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Core code snippet -->
+  <div class="section-label">// CORE CODE</div>
+  <div class="section-title">The RAG Query Function</div>
+
+  <div class="code-block">
+<pre><code><span class="code-comment"># query.py — the heart of your system</span>
+<span class="code-kw">from</span> langchain.vectorstores <span class="code-kw">import</span> Chroma
+<span class="code-kw">from</span> langchain.embeddings <span class="code-kw">import</span> HuggingFaceEmbeddings
+<span class="code-kw">import</span> openai
+
+<span class="code-var">embeddings</span> = HuggingFaceEmbeddings(model_name=<span class="code-str">"all-MiniLM-L6-v2"</span>)
+<span class="code-var">vectordb</span>   = Chroma(persist_directory=<span class="code-str">"./chroma_db"</span>, embedding_function=embeddings)
+
+<span class="code-kw">def</span> <span class="code-fn">ask_document</span>(question: str, doc_id: str):
+    <span class="code-comment"># 1. Find the most relevant chunks</span>
+    <span class="code-var">results</span> = vectordb.similarity_search(
+        question, k=<span class="code-str">5</span>,
+        filter={<span class="code-str">"doc_id"</span>: doc_id}
+    )
+
+    <span class="code-comment"># 2. Build context from chunks</span>
+    <span class="code-var">context</span> = <span class="code-str">"\n\n"</span>.join([r.page_content <span class="code-kw">for</span> r <span class="code-kw">in</span> results])
+
+    <span class="code-comment"># 3. Send to GPT with the context</span>
+    <span class="code-var">response</span> = openai.chat.completions.create(
+        model=<span class="code-str">"gpt-3.5-turbo"</span>,
+        messages=[
+            {<span class="code-str">"role"</span>: <span class="code-str">"system"</span>, <span class="code-str">"content"</span>: <span class="code-str">"Answer using ONLY the context provided. Always cite page numbers."</span>},
+            {<span class="code-str">"role"</span>: <span class="code-str">"user"</span>, <span class="code-str">"content"</span>: <span class="code-fn">f</span><span class="code-str">"Context:\n{context}\n\nQuestion: {question}"</span>}
+        ]
+    )
+
+    <span class="code-comment"># 4. Return answer + source metadata</span>
+    <span class="code-kw">return</span> {
+        <span class="code-str">"answer"</span>: response.choices[<span class="code-str">0</span>].message.content,
+        <span class="code-str">"sources"</span>: [{<span class="code-str">"page"</span>: r.metadata[<span class="code-str">"page"</span>], <span class="code-str">"text"</span>: r.page_content[:<span class="code-str">200</span>]} <span class="code-kw">for</span> r <span class="code-kw">in</span> results]
+    }
+</code></pre>
+  </div>
+
+  <!-- Ratings -->
+  <div class="section-label">// PROJECT ASSESSMENT</div>
+  <div class="section-title">How Good Is This?</div>
+
+  <div class="ratings">
+    <div class="rating-card">
+      <h4>Portfolio Value</h4>
+      <div class="rating-val" style="color:#10b981;">9<span style="font-size:20px;color:#64748b">/10</span></div>
+      <div class="rating-bar"><div class="rating-fill" style="width:90%;background:#10b981"></div></div>
+      <div class="rating-desc">Same tech as Harvey AI ($3B), Klarity, Luminance. Extremely impressive to recruiters.</div>
+    </div>
+    <div class="rating-card">
+      <h4>Difficulty</h4>
+      <div class="rating-val" style="color:#f59e0b;">6<span style="font-size:20px;color:#64748b">/10</span></div>
+      <div class="rating-bar"><div class="rating-fill" style="width:60%;background:#f59e0b"></div></div>
+      <div class="rating-desc">Intermediate. LangChain handles the hardest parts. Concepts > code complexity.</div>
+    </div>
+    <div class="rating-card">
+      <h4>Cost</h4>
+      <div class="rating-val" style="color:#6366f1;">~$0<span style="font-size:20px;color:#64748b">/mo</span></div>
+      <div class="rating-bar"><div class="rating-fill" style="width:5%;background:#6366f1"></div></div>
+      <div class="rating-desc">Embeddings are local (free). GPT only for answers. 1000 queries ≈ $1.</div>
+    </div>
+    <div class="rating-card">
+      <h4>Time to MVP</h4>
+      <div class="rating-val" style="color:#22d3ee;">1–2<span style="font-size:20px;color:#64748b">wks</span></div>
+      <div class="rating-bar"><div class="rating-fill" style="width:75%;background:#22d3ee"></div></div>
+      <div class="rating-desc">Coding 2–3 hrs/day. Full-featured version with UI in 2 weeks.</div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <p>smart-document-insights // built with RAG + ChromaDB + GPT-3.5</p>
+  </div>
+
+</div>
+
+<script>
+  // Animate rating bars on scroll
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.querySelectorAll('.rating-fill').forEach(bar => {
+          const w = bar.style.width;
+          bar.style.width = '0%';
+          setTimeout(() => bar.style.width = w, 100);
+        });
+      }
+    });
+  }, { threshold: 0.3 });
+
+  document.querySelectorAll('.ratings').forEach(el => observer.observe(el));
+</script>
+</body>
+</html>

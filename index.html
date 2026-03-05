@@ -1,0 +1,233 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Smart Document Insights</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', sans-serif; background: #0f0f13; color: #e2e8f0; height: 100vh; display: flex; flex-direction: column; }
+    header { background: #1a1a2e; padding: 16px 24px; border-bottom: 1px solid #2d2d44; display: flex; align-items: center; gap: 12px; }
+    header h1 { font-size: 20px; font-weight: 700; background: linear-gradient(90deg, #818cf8, #22d3ee); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .main { display: flex; flex: 1; overflow: hidden; }
+    .sidebar { width: 300px; background: #13131a; border-right: 1px solid #2d2d44; padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+    .sidebar h2 { font-size: 14px; color: #64748b; text-transform: uppercase; letter-spacing: 1px; }
+    .upload-area { border: 2px dashed #2d2d44; border-radius: 12px; padding: 24px; text-align: center; cursor: pointer; transition: all 0.3s; }
+    .upload-area:hover { border-color: #818cf8; background: rgba(129,140,248,0.05); }
+    .upload-area input { display: none; }
+    .upload-area p { color: #64748b; font-size: 13px; margin-top: 8px; }
+    .upload-btn { background: linear-gradient(135deg, #6366f1, #22d3ee); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; width: 100%; margin-top: 8px; }
+    .status { font-size: 12px; color: #10b981; background: rgba(16,185,129,0.1); border-radius: 8px; padding: 10px; display: none; }
+    .scope { font-size: 13px; color: #cbd5e1; display: flex; align-items: center; gap: 8px; }
+    .scope input { transform: translateY(1px); }
+    .active-doc { font-size: 12px; color: #94a3b8; word-break: break-all; }
+    .chat { flex: 1; display: flex; flex-direction: column; }
+    .messages { flex: 1; overflow-y: auto; padding: 24px; display: flex; flex-direction: column; gap: 16px; }
+    .message { max-width: 75%; padding: 14px 18px; border-radius: 16px; font-size: 14px; line-height: 1.6; }
+    .message.user { background: linear-gradient(135deg, #6366f1, #4f46e5); color: white; align-self: flex-end; border-radius: 16px 16px 4px 16px; }
+    .message.ai { background: #1e1e2e; color: #e2e8f0; align-self: flex-start; border-radius: 16px 16px 16px 4px; border: 1px solid #2d2d44; }
+    .message.ai.thinking { color: #64748b; font-style: italic; }
+    .message.ai p { margin: 0 0 8px 0; }
+    .message.ai p:last-child { margin-bottom: 0; }
+    .message.ai ul { margin: 4px 0 8px 18px; padding: 0; }
+    .message.ai li { margin: 4px 0; }
+    .citations { margin-top: 10px; padding-top: 8px; border-top: 1px solid #2d2d44; color: #94a3b8; font-size: 12px; }
+    .input-area { padding: 16px 24px; background: #13131a; border-top: 1px solid #2d2d44; display: flex; gap: 12px; }
+    .input-area input { flex: 1; background: #1e1e2e; border: 1px solid #2d2d44; border-radius: 10px; padding: 12px 16px; color: #e2e8f0; font-size: 14px; outline: none; }
+    .input-area input:focus { border-color: #6366f1; }
+    .input-area button { background: linear-gradient(135deg, #6366f1, #22d3ee); color: white; border: none; padding: 12px 24px; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 14px; }
+    .input-area button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .welcome { text-align: center; margin: auto; color: #64748b; }
+    .welcome h2 { font-size: 24px; margin-bottom: 8px; color: #94a3b8; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Smart Document Insights</h1>
+</header>
+
+<div class="main">
+  <div class="sidebar">
+    <h2>Upload Document</h2>
+    <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+      <div style="font-size:32px">PDF</div>
+      <p>Click to upload a PDF</p>
+      <input type="file" id="fileInput" accept=".pdf" onchange="uploadFile(this)">
+    </div>
+    <button class="upload-btn" onclick="document.getElementById('fileInput').click()">Choose PDF</button>
+    <button class="upload-btn" style="background:linear-gradient(135deg,#ef4444,#dc2626);margin-top:8px" onclick="clearDB()">Clear Database</button>
+    <label class="scope"><input type="checkbox" id="allDocsToggle"> Search all documents</label>
+    <div class="active-doc" id="activeDocLabel">Active document: none</div>
+    <div class="status" id="status"></div>
+  </div>
+
+  <div class="chat">
+    <div class="messages" id="messages">
+      <div class="welcome">
+        <h2>Welcome</h2>
+        <p>Upload one or more PDFs, then ask questions.</p>
+      </div>
+    </div>
+    <div class="input-area">
+      <input type="text" id="questionInput" placeholder="Ask a question about your document..." onkeypress="if(event.key==='Enter') askQuestion()">
+      <button onclick="askQuestion()" id="askBtn">Ask</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const chatHistory = [];
+  let activeSource = '';
+
+  function escapeHtml(value) {
+    return String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function renderAiText(text) {
+    const safe = escapeHtml(text || '');
+    const lines = safe.split(/\r?\n/);
+    let html = '';
+    let inList = false;
+
+    for (const rawLine of lines) {
+      const line = rawLine.trim();
+      const bulletMatch = line.match(/^[-*]\s+(.+)/);
+      if (bulletMatch) {
+        if (!inList) {
+          html += '<ul>';
+          inList = true;
+        }
+        html += `<li>${bulletMatch[1]}</li>`;
+      } else {
+        if (inList) {
+          html += '</ul>';
+          inList = false;
+        }
+        if (line) {
+          html += `<p>${line}</p>`;
+        }
+      }
+    }
+
+    if (inList) html += '</ul>';
+    return html || '<p></p>';
+  }
+
+  function formatCitations(citations) {
+    if (!Array.isArray(citations) || citations.length === 0) return '';
+    const rows = citations
+      .map(c => `${escapeHtml(c.source || 'unknown')} | page ${escapeHtml(c.page ?? '?')} | chunk ${escapeHtml(c.chunk ?? '?')}`)
+      .join('<br>');
+    return `<div class="citations"><strong>Sources:</strong><br>${rows}</div>`;
+  }
+
+  function addMessage(role, text, citations) {
+    const messages = document.getElementById('messages');
+    const roleClass = role === 'user' ? 'user' : 'ai';
+    const content = role === 'ai'
+      ? `${renderAiText(text)}${formatCitations(citations)}`
+      : escapeHtml(text);
+    messages.innerHTML += `<div class="message ${roleClass}">${content}</div>`;
+    messages.scrollTop = messages.scrollHeight;
+  }
+
+  function updateActiveDocLabel() {
+    const label = document.getElementById('activeDocLabel');
+    label.textContent = `Active document: ${activeSource || 'none'}`;
+  }
+
+  async function uploadFile(input) {
+    const file = input.files[0];
+    if (!file) return;
+
+    const status = document.getElementById('status');
+    status.style.display = 'block';
+    status.textContent = 'Uploading and processing...';
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const res = await fetch('http://127.0.0.1:5000/upload', { method: 'POST', body: formData });
+      const data = await res.json();
+      status.textContent = data.message;
+
+      activeSource = file.name;
+      updateActiveDocLabel();
+      chatHistory.length = 0;
+
+      const welcome = document.querySelector('.welcome');
+      if (welcome) welcome.remove();
+      addMessage('ai', `Document ready. ${file.name} has been processed. Ask me anything about it.`);
+    } catch (e) {
+      status.textContent = 'Error uploading. Is the server running?';
+    }
+  }
+
+  async function askQuestion() {
+    const input = document.getElementById('questionInput');
+    const question = input.value.trim();
+    if (!question) return;
+
+    const messages = document.getElementById('messages');
+    const btn = document.getElementById('askBtn');
+    const searchAll = document.getElementById('allDocsToggle').checked;
+
+    const welcome = document.querySelector('.welcome');
+    if (welcome) welcome.remove();
+
+    addMessage('user', question);
+    input.value = '';
+    btn.disabled = true;
+
+    const thinkingId = 'thinking_' + Date.now();
+    messages.innerHTML += `<div class="message ai thinking" id="${thinkingId}">Thinking...</div>`;
+    messages.scrollTop = messages.scrollHeight;
+
+    try {
+      const res = await fetch('http://127.0.0.1:5000/ask', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          question,
+          history: chatHistory,
+          active_source: activeSource,
+          search_all: searchAll
+        })
+      });
+      const data = await res.json();
+
+      const citationHtml = formatCitations(data.citations);
+      document.getElementById(thinkingId).outerHTML = `<div class="message ai">${renderAiText(data.answer || 'No answer returned.')}${citationHtml}</div>`;
+
+      chatHistory.push({ role: 'user', content: question });
+      chatHistory.push({ role: 'assistant', content: data.answer || '' });
+      if (chatHistory.length > 12) {
+        chatHistory.splice(0, chatHistory.length - 12);
+      }
+    } catch (e) {
+      document.getElementById(thinkingId).outerHTML = `<div class="message ai">Error. Is the server running?</div>`;
+    }
+
+    btn.disabled = false;
+    messages.scrollTop = messages.scrollHeight;
+  }
+
+  async function clearDB() {
+    await fetch('http://127.0.0.1:5000/clear', { method: 'POST' });
+    chatHistory.length = 0;
+    activeSource = '';
+    updateActiveDocLabel();
+    document.getElementById('messages').innerHTML = '<div class="message ai">Database cleared. Upload a new PDF.</div>';
+    document.getElementById('status').textContent = '';
+  }
+
+  updateActiveDocLabel();
+</script>
+</body>
+</html>
